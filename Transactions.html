@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>QuikStep · Transactions</title>
+  <meta name="viewport" content="width=1440" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="assets/colors_and_type.css" />
+
+  <!-- Babel (older version that supports data-type=module without target errors) -->
+  <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js" crossorigin="anonymous"></script>
+
+  <!-- ES module resolution for MUI + Emotion (point react -> the UMD globals so we share a single React instance) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1?dev",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime?dev",
+      "react-dom": "https://esm.sh/react-dom@18.3.1?dev",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client?dev",
+      "@emotion/react": "https://esm.sh/@emotion/react@11.13.3?deps=react@18.3.1&dev",
+      "@emotion/styled": "https://esm.sh/@emotion/styled@11.13.0?deps=react@18.3.1,@emotion/react@11.13.3&dev",
+      "@mui/material": "https://esm.sh/@mui/material@5.16.7?deps=react@18.3.1,react-dom@18.3.1,@emotion/react@11.13.3,@emotion/styled@11.13.0&dev"
+    }
+  }
+  </script>
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: #F6F7F9;
+    }
+
+    #root {
+      min-height: 100vh;
+    }
+
+    .__loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #667085;
+      font: 500 13px Inter, sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root">
+    <div class="__loading">Loading QuikStep…</div>
+  </div>
+
+  <!-- Data first (no module deps) -->
+  <script src="data.js"></script>
+
+  <!-- Modules (run in document order). Each module attaches its exports to window. -->
+  <script type="text/babel" data-type="module" data-presets="react" src="theme.jsx"></script>
+  <script type="text/babel" data-type="module" data-presets="react" src="components-shell.jsx"></script>
+  <script type="text/babel" data-type="module" data-presets="react" src="components-views.jsx"></script>
+  <script type="text/babel" data-type="module" data-presets="react" src="components-detail.jsx"></script>
+  <script type="text/babel" data-type="module" data-presets="react" src="app.jsx"></script>
+</body>
+
+</html>

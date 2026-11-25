@@ -1,0 +1,197 @@
+/* =====================================================================
+ * Crane Worldwide — Design Tokens (v2: Indemni-inspired direction)
+ *
+ * Visual direction lifted from indemni.com — dark blue-grey gradient
+ * page background with white floating cards on top, Inter typography,
+ * bright cobalt-blue primary action. Crane brand identity (navy + green
+ * logo) is preserved as the product mark; Indemni's palette drives the
+ * UI surfaces.
+ * ===================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+:root {
+  /* ── Crane brand (kept for logo + identity, used sparingly) ─────── */
+  --crane-navy: #132D76;
+  --crane-navy-deep: #001024;
+  --crane-green: #01803E;
+  --crane-green-alt: #007F40;
+  --crane-teal: #21AC85;
+
+  /* ── Page background ─────────────────────────────────────────────── */
+  /* Flat light theme. No gradients anywhere. Cards float on a very subtle
+   * cool-grey wash; primary surfaces are pure white with 1-px borders. */
+  --page-bg: #F6F7F9;
+  --page-bg-solid: #F6F7F9;
+
+  /* ── Accent — Indemni cobalt ────────────────────────────────────── */
+  --accent: #1957FF;                       /* primary action, links, active */
+  --accent-hover: #1146D4;
+  --accent-soft: #E8EFFF;                  /* selected/hover tint */
+  --accent-ring: rgba(25, 87, 255, 0.22);
+
+  /* ── Surfaces ───────────────────────────────────────────────────── */
+  --surface: #FFFFFF;                      /* primary card */
+  --surface-2: #F7F8FA;                    /* inset / sidebar / nested fill */
+  --surface-3: #F1F2F4;                    /* deeper nested fill */
+  --surface-hover: #F4F6F9;
+  --surface-overlay: rgba(255,255,255,0.96); /* cards floating on the dark bg */
+
+  --border: #E6E8EC;                       /* default hairline */
+  --border-soft: #EFF0F3;
+  --border-strong: #D5D9E0;
+  --divider: #EFF0F3;
+
+  /* ── Foreground ────────────────────────────────────────────────── */
+  --fg:    #0F1626;                        /* primary text — slate near-black */
+  --fg-2:  #475467;                        /* secondary */
+  --fg-3:  #667085;                        /* muted */
+  --fg-4:  #98A2B3;                        /* placeholder / disabled */
+  --fg-5:  #BDC3CC;
+  --fg-on-dark: #FFFFFF;
+  --fg-on-dark-muted: #B9C1CC;
+
+  /* ── Status (semantic) — Indemni-style soft pills ───────────────── */
+  --status-success:    #0E9F5E;
+  --status-success-bg: #E1F5EB;
+  --status-success-soft: #ECFAF2;
+
+  --status-warning:    #D77A1A;
+  --status-warning-bg: #FCF0DA;
+  --status-warning-soft: #FDF7EC;
+
+  --status-error:    #D63A3A;
+  --status-error-bg: #FBE4E4;
+  --status-error-soft: #FDEFEF;
+
+  --status-info:    #2F6FE8;
+  --status-info-bg: #E5EEFD;
+  --status-info-soft: #F1F6FE;
+
+  --status-neutral:    #667085;
+  --status-neutral-bg: #EEF0F3;
+
+  /* ── Typography ─────────────────────────────────────────────────── */
+  --font-sans: "Inter", "Helvetica Neue", Helvetica, system-ui, -apple-system, sans-serif;
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Compact data-dense scale (per brief, slightly relaxed for legibility) */
+  --text-2xs: 10px;
+  --text-xs:  11px;
+  --text-sm:  12px;
+  --text-base:13px;     /* default UI text — Indemni hovers here */
+  --text-md:  14px;     /* card labels, KPI titles */
+  --text-lg:  16px;     /* card headings */
+  --text-xl:  18px;
+  --text-2xl: 22px;     /* page titles */
+  --text-3xl: 30px;     /* KPI metrics */
+  --text-4xl: 40px;
+
+  --leading-tight: 1.1;
+  --leading-snug: 1.25;
+  --leading-normal: 1.45;
+  --leading-loose: 1.6;
+
+  --tracking-tight: -0.012em;             /* Inter looks best slightly tighter */
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ── Spacing (4-px base) ────────────────────────────────────────── */
+  --space-0: 0;
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 12px;
+  --space-6: 16px;
+  --space-7: 24px;
+  --space-8: 32px;
+  --space-9: 48px;
+
+  /* ── Radius ─────────────────────────────────────────────────────── */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;                       /* default card radius */
+  --radius-xl: 16px;
+  --radius-2xl: 20px;                      /* hero/page-wrapper card */
+  --radius-pill: 999px;
+
+  /* ── Shadow / elevation ─────────────────────────────────────────── */
+  /* Light theme: shadows are very subtle. Most separation is hairlines. */
+  --shadow-0: none;
+  --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-2: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.03);
+  --shadow-3: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --shadow-pop: 0 8px 24px rgba(15, 23, 42, 0.10);
+  --shadow-card-mobile: 0 1px 3px rgba(15, 23, 42, 0.06);
+
+  /* ── Sizing rhythm (Outlook-tight) ──────────────────────────────── */
+  --header-h: 36px;
+  --filter-h: 32px;
+  --row-h-compact: 26px;
+  --row-h: 28px;                           /* default table row */
+  --row-h-cozy: 36px;
+  --row-h-mobile: 48px;
+  --input-h: 28px;
+  --input-h-mobile: 48px;
+  --btn-h-sm: 22px;
+  --btn-h: 28px;
+  --btn-h-mobile: 44px;
+  --sidebar-collapsed-w: 44px;
+  --sidebar-expanded-w: 220px;
+
+  /* ── Motion ─────────────────────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 100ms;
+  --duration-base: 150ms;
+  --duration-slow: 220ms;
+}
+
+/* =====================================================================
+ * Base type
+ * ===================================================================== */
+
+.crane {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--fg);
+  font-feature-settings: "tnum", "lnum", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: var(--tracking-tight);
+}
+
+/* Page wrapper: flat light surface */
+.crane-page {
+  min-height: 100vh;
+  background: var(--page-bg);
+  padding: 16px;
+  color: var(--fg);
+}
+
+/* Semantic type classes */
+.t-display       { font-family: var(--font-display); font-weight: 700; font-size: var(--text-3xl); line-height: 1.05; letter-spacing: -0.018em; color: var(--fg); }
+.t-h1            { font-family: var(--font-display); font-weight: 700; font-size: var(--text-2xl); line-height: 1.15; letter-spacing: -0.014em; color: var(--fg); }
+.t-h2            { font-weight: 600; font-size: var(--text-xl); line-height: 1.25; letter-spacing: -0.01em; color: var(--fg); }
+.t-h3            { font-weight: 600; font-size: var(--text-lg); line-height: 1.3; color: var(--fg); }
+.t-section       { font-weight: 600; font-size: var(--text-md); line-height: 1.3; color: var(--fg); }
+.t-body          { font-weight: 400; font-size: var(--text-base); line-height: var(--leading-normal); color: var(--fg); }
+.t-body-sm       { font-weight: 400; font-size: var(--text-sm); line-height: var(--leading-normal); color: var(--fg); }
+.t-label         { font-weight: 500; font-size: var(--text-sm); line-height: 1.2; color: var(--fg); }
+.t-meta          { font-weight: 400; font-size: var(--text-sm); line-height: 1.3; color: var(--fg-2); }
+.t-muted         { font-weight: 400; font-size: var(--text-sm); line-height: 1.3; color: var(--fg-4); }
+.t-eyebrow       { font-weight: 500; font-size: var(--text-xs); line-height: 1.2; letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--fg-3); }
+.t-table-header  { font-weight: 500; font-size: var(--text-xs); line-height: 1; letter-spacing: 0.02em; color: var(--fg-3); }
+.t-cell          { font-weight: 400; font-size: var(--text-base); line-height: 1.3; color: var(--fg); }
+.t-kpi-number    { font-family: var(--font-display); font-weight: 600; font-size: var(--text-3xl); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--fg); }
+.t-mono          { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.t-link          { color: var(--accent); text-decoration: none; }
+.t-link:hover    { text-decoration: underline; }
