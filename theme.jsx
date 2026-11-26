@@ -29,6 +29,28 @@ const CRANE = {
   infoBg:        "#E5EEFD",
   neutral:       "#667085",
   neutralBg:     "#EEF0F3",
+
+  // -- Production board (kanban) tokens, matched to the live platform --
+  accentRing:    "rgba(25, 87, 255, 0.22)",
+  boardGreen:    "#17804A",
+  ackGreen:      "#17A06B",
+
+  alertLine:     "#E07B39",
+  alertPanelBg:  "#FADFCB",
+  alertPanelFg:  "#5C3312",
+  alertHeadFg:   "#8A4A15",
+  alertBadgeBg:  "#F8C999",
+  alertBadgeFg:  "#9C4F10",
+
+  notifLine:     "#2E9E6B",
+  notifPanelBg:  "#DCEFE1",
+  notifPanelFg:  "#265C3C",
+  notifHeadFg:   "#A8760F",
+  notifBadgeBg:  "#FBE6B4",
+  notifBadgeFg:  "#A8760F",
+
+  aiPanelBg:     "#EDF7EF",
+  aiPanelFg:     "#2E6B47",
 };
 
 const theme = createTheme({

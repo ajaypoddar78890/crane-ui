@@ -304,43 +304,6 @@ function AssetTile({ asset }) {
   );
 }
 
-// Compact 60x60 thumbnail for use inside activity sections (assets are
-// already grouped by step, so no need for the bigger tile chrome).
-function MiniAssetTile({ asset }) {
-  const c = KIND_COLORS[asset.kind] || KIND_COLORS.doc;
-  const hasPhoto = !!asset.thumb;
-  return (
-    <Tooltip arrow disableInteractive placement="top" title={asset.name}>
-      <Box sx={{
-        position:"relative", width:60, height:60, borderRadius:"6px", overflow:"hidden",
-        border:`1px solid ${T.border}`, cursor:"pointer", flexShrink:0,
-        bgcolor: hasPhoto ? "#F2F4F8" : c.bg,
-        transition:"all 100ms",
-        "&:hover": { borderColor: T.borderStrong, transform:"translateY(-1px)", boxShadow:"0 2px 6px rgba(15,23,42,.08)" },
-        display:"flex", alignItems:"center", justifyContent:"center",
-      }}>
-        {hasPhoto ? (
-          <Box component="img" src={asset.thumb} alt={asset.name}
-            sx={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
-        ) : (
-          <Box sx={{ color:c.fg }}>
-            {asset.kind === "pdf"   && <I.Folder size={20}/>}
-            {asset.kind === "doc"   && <I.Folder size={20}/>}
-            {asset.kind === "sheet" && <I.Folder size={20}/>}
-            {asset.kind === "video" && <I.Eye size={20}/>}
-            {asset.kind === "image" && <I.Box1 size={20}/>}
-          </Box>
-        )}
-        <Box sx={{
-          position:"absolute", bottom:3, left:3,
-          fontSize:8, fontWeight:700, px:0.4, py:0.05, borderRadius:"2px",
-          bgcolor:"rgba(0,0,0,0.65)", color:"#fff", letterSpacing:"0.05em",
-        }}>{c.chip}</Box>
-      </Box>
-    </Tooltip>
-  );
-}
-
 // ─── Activity feed (alerts + updates, clean white card) ─────────────────
 function ActivityFeed({ tx }) {
   const hasAlerts = tx.alerts && tx.alerts.length > 0;
@@ -415,10 +378,113 @@ function ActivityFeed({ tx }) {
 }
 
 // ─── Activity section card ───────────────────────────────────────────────
+// Multi-value field (e.g. "List of assets for location 1", Count: 16).
+function ListFieldValue({ values }) {
+  return (
+    <Box sx={{
+      mt:0.4, maxHeight:168, overflow:"auto",
+      border:`1px solid ${T.border}`, borderRadius:"6px",
+      bgcolor:T.surface2, px:1, py:0.6,
+    }}>
+      <Stack gap={0.2}>
+        {values.map((v, i) => (
+          <Typography key={i} sx={{
+            fontSize:12.5, color:T.accent, fontWeight:500, lineHeight:1.5,
+            fontVariantNumeric:"tabular-nums",
+          }}>{v}</Typography>
+        ))}
+      </Stack>
+    </Box>
+  );
+}
+
+// Image-upload field (PPE verification photo, POD copy). The live page
+// renders a thumbnail; here the upload is named instead of previewed.
+function PhotoFieldValue({ title, previousValues }) {
+  return (
+    <Stack gap={0.5} sx={{ alignItems:"flex-start" }}>
+      <Typography
+        role="button"
+        onClick={e => e.stopPropagation()}
+        sx={{
+          fontSize:13, color:T.accent, fontWeight:500, lineHeight:1.35,
+          cursor:"pointer", textDecoration:"underline",
+          textUnderlineOffset:"2px", textDecorationColor:"rgba(25,87,255,.35)",
+          "&:hover": { color:T.accentHover, textDecorationColor:"currentColor" },
+        }}>
+        {title || "Photo"}
+      </Typography>
+      {previousValues > 0 && <PreviousValuesChip count={previousValues}/>}
+    </Stack>
+  );
+}
+
+// The amber "PREVIOUS VALUE(S)" disclosure the live form puts under a
+// field that has been edited.
+function PreviousValuesChip({ count }) {
+  return (
+    <Stack direction="row" alignItems="center" gap={0.5} sx={{
+      bgcolor:T.warningBg, color:T.warning,
+      border:`1px solid ${T.warning}`, borderLeftWidth:3,
+      borderRadius:"4px", px:0.75, py:0.3, cursor:"pointer",
+      fontSize:9.5, fontWeight:700, letterSpacing:"0.05em", textTransform:"uppercase",
+      "&:hover": { filter:"brightness(0.98)" },
+    }}>
+      <Box>{count > 1 ? `Previous values (${count})` : "Previous value"}</Box>
+      <I.ChevronD size={11}/>
+    </Stack>
+  );
+}
+
+function ActivityField({ f }) {
+  const isList  = f.kind === "list";
+  const isPhoto = f.kind === "photo";
+
+  return (
+    <Box sx={{ gridColumn: f.colSpan ? `span ${f.colSpan}` : "auto", minWidth:0 }}>
+      <Stack direction="row" alignItems="baseline" gap={0.75} sx={{ mb:0.3 }}>
+        <Typography sx={{ fontSize:11, color:T.fg3, fontWeight:500, lineHeight:1.25, flex:1, minWidth:0 }}>
+          {f.label}
+        </Typography>
+        {f.count != null && (
+          <Typography sx={{ fontSize:10.5, color:T.accent, fontWeight:700, whiteSpace:"nowrap", flexShrink:0 }}>
+            Count: {f.count}
+          </Typography>
+        )}
+      </Stack>
+
+      {isList  && <ListFieldValue values={f.values}/>}
+      {isPhoto && <PhotoFieldValue title={f.title} previousValues={f.previousValues || 0}/>}
+
+      {!isList && !isPhoto && (
+        f.boxed ? (
+          <Box sx={{
+            border:`1px solid ${T.accent}`, borderRadius:"5px",
+            bgcolor:T.surface2, px:1, py:0.65,
+          }}>
+            <Typography sx={{ fontSize:13, color:T.fg, fontWeight:500, lineHeight:1.35, wordBreak:"break-word" }}>
+              {f.value}
+            </Typography>
+          </Box>
+        ) : (
+          <Typography sx={{ fontSize:13, color:T.fg, fontWeight:500, lineHeight:1.35, wordBreak:"break-word" }}>
+            {f.value}
+          </Typography>
+        )
+      )}
+
+      {!isPhoto && f.previousValues > 0 && (
+        <Box sx={{ mt:0.5 }}><PreviousValuesChip count={f.previousValues}/></Box>
+      )}
+    </Box>
+  );
+}
+
 function ActivitySection({ section }) {
   // Open by default — user can collapse manually.
   const [collapsed, setCollapsed] = useState(false);
   const Icon = I[section.icon] || I.Box1;
+  const fields = section.fields || [];
 
   const stateChip = {
     done:    { label:"Complete",    fg:T.success, bg:T.successBg },
@@ -440,6 +506,26 @@ function ActivitySection({ section }) {
           <Icon size={14}/>
         </Box>
         <Typography sx={{ fontSize:14, fontWeight:600, color:T.fg }}>{section.title}</Typography>
+
+        {/* Step reference badge (e.g. 533) carried by the live platform */}
+        {section.badge && (
+          <Box sx={{
+            fontSize:10.5, fontWeight:600, color:T.fg2, bgcolor:T.surface3,
+            borderRadius:999, px:0.9, py:0.15, fontVariantNumeric:"tabular-nums",
+          }}>{section.badge}</Box>
+        )}
+
+        {/* AI-processed marker */}
+        {section.ai && (
+          <Stack direction="row" alignItems="center" gap={0.4} sx={{
+            fontSize:10, fontWeight:700, color:T.success, bgcolor:T.successBg,
+            borderRadius:999, px:0.75, py:0.2, letterSpacing:"0.04em",
+          }}>
+            <Box sx={{ width:5, height:5, borderRadius:999, bgcolor:T.success }}/>
+            AI
+          </Stack>
+        )}
+
         <Box sx={{
           display:"inline-flex", alignItems:"center", gap:0.5,
           px:0.75, py:0.15, borderRadius:"4px",
@@ -454,7 +540,12 @@ function ActivitySection({ section }) {
         <Box sx={{ flex:1 }}/>
 
         <Stack alignItems="flex-end" sx={{ minWidth:0 }}>
-          <Typography sx={{ fontSize:10.5, color:T.fg3, lineHeight:1.2 }}>Updated by <Box component="span" sx={{ color:T.fg2, fontWeight:500 }}>{section.updatedBy}</Box></Typography>
+          <Typography sx={{ fontSize:10.5, color:T.fg3, lineHeight:1.2 }}>
+            Updated by <Box component="span" sx={{ color:T.fg2, fontWeight:500 }}>{section.updatedBy}</Box>
+            {section.updatedByRole && (
+              <Box component="span" sx={{ color:T.fg4 }}> ({section.updatedByRole})</Box>
+            )}
+          </Typography>
           <Typography sx={{ fontSize:10.5, color:T.fg4, lineHeight:1.2 }}>{section.updatedAt}</Typography>
         </Stack>
         <Stack direction="row" gap={0.25} sx={{ ml:1 }} onClick={e => e.stopPropagation()}>
@@ -469,27 +560,29 @@ function ActivitySection({ section }) {
           </Tooltip>
         </Stack>
       </Stack>
+
       {!collapsed && (
         <Box>
-          <Box sx={{ p:1.75, display:"grid", gridTemplateColumns:"repeat(4, minmax(0,1fr))", gap:1.5 }}>
-            {section.fields.map((f, i) => (
-              <Box key={i} sx={{ gridColumn: f.colSpan ? `span ${f.colSpan}` : "auto", minWidth:0 }}>
-                <Typography sx={{ fontSize:11, color:T.fg3, fontWeight:500, lineHeight:1.2, mb:0.3 }}>{f.label}</Typography>
-                <Typography sx={{ fontSize:13, color:T.fg, fontWeight:500, lineHeight:1.35, whiteSpace:"normal", wordBreak:"break-word" }}>{f.value}</Typography>
-              </Box>
-            ))}
-          </Box>
-          {section.assets && section.assets.length > 0 && (
-            <Box sx={{ borderTop:`1px solid ${T.borderSoft}`, bgcolor:T.surface2, px:1.75, py:1.25 }}>
-              <Stack direction="row" alignItems="center" gap={0.75} sx={{ mb:0.85 }}>
-                <Box sx={{ color:T.fg3 }}><I.Folder size={12}/></Box>
-                <Typography sx={{ fontSize:11, fontWeight:600, color:T.fg3, textTransform:"uppercase", letterSpacing:"0.04em" }}>
-                  Attached Files
-                </Typography>
-                <Box sx={{ fontSize:10.5, color:T.fg3, bgcolor:"#fff", border:`1px solid ${T.border}`, px:0.6, py:0.05, borderRadius:"4px", fontWeight:500 }}>{section.assets.length}</Box>
-              </Stack>
-              <Stack direction="row" gap={0.75} sx={{ flexWrap:"wrap" }}>
-                {section.assets.map(a => <MiniAssetTile key={a.id} asset={a}/>)}
+          {fields.length > 0 ? (
+            <Box sx={{ p:1.75, display:"grid", gridTemplateColumns:"repeat(4, minmax(0,1fr))", gap:1.5, alignItems:"start" }}>
+              {fields.map((f, i) => <ActivityField key={i} f={f}/>)}
+            </Box>
+          ) : (
+            <Box sx={{ px:1.75, py:1.4 }}>
+              <Typography sx={{ fontSize:12, color:T.fg4 }}>No values recorded for this step.</Typography>
+            </Box>
+          )}
+
+          {/* AI detection disclosure, as the live POD step renders it */}
+          {section.aiDetectionCount > 0 && (
+            <Box sx={{ px:1.75, pb:1.4, mt:-0.5 }}>
+              <Stack direction="row" alignItems="center" gap={0.5} role="button" sx={{
+                color:T.accent, fontSize:11.5, fontWeight:600, cursor:"pointer",
+                letterSpacing:"0.03em", textTransform:"uppercase",
+                "&:hover": { textDecoration:"underline" },
+              }}>
+                <I.ChevronR size={12}/>
+                <Box>AI Detection ({section.aiDetectionCount})</Box>
               </Stack>
             </Box>
           )}

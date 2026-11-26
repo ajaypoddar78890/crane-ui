@@ -96,6 +96,10 @@ const I = {
   Refresh: (p) => <Ic {...p}><path d="M3 12a9 9 0 0 1 15.5-6.3L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/></Ic>,
   Video:   (p) => <Ic {...p}><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m22 8-6 4 6 4V8z"/></Ic>,
   Edit:    (p) => <Ic {...p}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></Ic>,
+  Copy:    (p) => <Ic {...p}><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></Ic>,
+  Tick:    (p) => <Ic {...p}><path d="m5 13 4 4 10-10"/></Ic>,
+  AlertTri:(p) => <Ic {...p}><path d="M10.3 3.7 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.7a2 2 0 0 0-3.4 0z" fill="currentColor" stroke="none"/><path d="M12 9.2v4.1M12 16.6h.01" stroke="#fff" strokeWidth="2.2"/></Ic>,
+  BellFill:(p) => <Ic {...p}><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8z" fill="currentColor" stroke="none"/><path d="M10 20.5a2 2 0 0 0 4 0"/></Ic>,
   Close:   (p) => <Ic {...p}><path d="M6 6l12 12M18 6 6 18"/></Ic>,
 };
 window.I = I;

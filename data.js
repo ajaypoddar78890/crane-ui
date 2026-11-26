@@ -179,88 +179,180 @@ window.CRANE_DATA = (() => {
     return out;
   }
 
-  // Activity sections — workflow stages, each with its own fields.
-  // Field labels vary per client per the dynamic-schema reality.
-  // state: "done" | "current" | "pending"
-  function buildActivities(client, i, rand) {
-    const cur = i % 6;
-    const stateFor = (idx) => idx < cur ? "done" : idx === cur ? "current" : "pending";
-    const titles = [
-      "Driver Assignment",
-      "Vehicle Booking",
-      "VADS Assignment",
-      "Booking with Operations",
-      "Pre Departure Tools / PPE Validation",
-      "Pre Departure Review SOP",
-    ];
-    const assetsByStep = titles.map(t => pickAssetsForStep(t, i, rand));
+  // ── Activity Log sections ────────────────────────────────────────────
+  // REAL workflow steps, transcribed from production screenshots of the
+  // Crane Worldwide transaction detail page for TRUCK 3-462772.
+  //
+  // Field order, labels (including their original casing and question
+  // marks) and values are exactly what the live platform rendered.
+  // Fields whose value was "NA" are dropped, per the capture brief.
+  //
+  // Field extras:
+  //   boxed:true      value rendered in the inset/highlighted box the
+  //                   live UI uses for edited values
+  //   kind:"list"     multi-value field; `values` + `count`
+  //   kind:"photo"    image upload; shown as `title` + optional `previousValues`
+  //   colSpan:n       spans n of the 4 grid columns
+  const REAL_ACTIVITIES = [
+    {
+      id:"job-creation", icon:"Box1", title:"Job Creation",
+      updatedBy:"Jaron Ruth", updatedByRole:"Control Tower",
+      updatedAt:"20 Nov 2026, 02:58 AM (IST)",
+      fields:[
+        { label:"Shipment number (pro number)", value:"TRUCK 3-462772" },
+        { label:"Pick up date",                 value:"20 Nov 2026" },
+        { label:"Delivery date",                value:"20 Nov 2026" },
+        { label:"Pick up site code",            value:"ISH-IAD5" },
+        { label:"Cargo type",                   value:"Racks" },
+        { label:"location 1 site code",         value:"IAD245- 3220 Digital Dr, Adamstown, Maryland, 21710", boxed:true, colSpan:2 },
+        {
+          label:"List of assets for location 1", kind:"list", count:16, colSpan:2,
+          values:[
+            "1704443314","1704579829","1704589705","1704603859",
+            "1704604044","1704819643","1780235172","1780235224",
+            "3539197694","3539199749","3539200547","3539201153",
+            "3539204342","3539204764","3539205045","3549022526",
+          ],
+        },
+        { label:"Total quantity of assets for location 1", value:"16" },
+        { label:"Original eta for location 1",             value:"2026-11-20, 08:15 AM" },
+      ],
+    },
+    {
+      id:"booking-ops", icon:"Phone", title:"Booking to Operations",
+      updatedBy:"Jaron Ruth", updatedByRole:"Control Tower",
+      updatedAt:"20 Nov 2026, 02:58 AM (IST)",
+      fields:[
+        { label:"Truck size",              value:"53ft FTL Dryvan" },
+        { label:"Lift gate requirements",  value:"tbd" },
+      ],
+    },
+    {
+      id:"delivery-planning", icon:"Tree", title:"Delivery Planning",
+      updatedBy:"Jaron Ruth", updatedByRole:"Control Tower",
+      updatedAt:"20 Nov 2026, 02:58 AM (IST)",
+      fields:[
+        { label:"Does a crate have to be returned?", value:"Yes" },
+        { label:"Delivery plan",   value:"ISH>Rally>IAD245>ISH", count:1 },
+        { label:"Location 1",      value:"IAD245- 3220 Digital Dr, Adamstown, Maryland, 21710", boxed:true, colSpan:2 },
+        { label:"Destination site code", value:"IAD245" },
+      ],
+    },
+    {
+      id:"doc-compliance", icon:"Folder", title:"Documentation & Compliance (VADS Lead)",
+      updatedBy:"Subhan Kiani", updatedByRole:"VADS Lead",
+      updatedAt:"20 Nov 2026, 06:21 PM (IST)",
+      fields:[
+        { label:"Is a government id and yellow badge present for all crew members?", value:"Yes", colSpan:2 },
+        { label:"Are there any compliance issues, or is the crew missing any required items?", value:"No", colSpan:2 },
+      ],
+    },
+    {
+      id:"vads-crew", icon:"Users", title:"VADS, Crew, Drivers & Vehicles",
+      updatedBy:"Jaron Ruth", updatedByRole:"Control Tower",
+      updatedAt:"20 Nov 2026, 02:58 AM (IST)",
+      fields:[
+        { label:"Team lead information (enter vads team lead details)", value:"Karianne- Jackson- 3016752749", boxed:true, colSpan:2 },
+        { label:"Driver information (enter driver name and phone number)", value:"Daveunce - Leonard- 9365461122", boxed:true, colSpan:2 },
+        { label:"Truck number",   value:"244011" },
+        { label:"Trailer number", value:"879127" },
+        { label:"Trailer type (e.g. 53 ft ftl dry van)", value:"53ft FTL Dryvan" },
+        { label:"Team reference number", value:"2" },
+        { label:"Rtf – roll to floor (identify who will perform rtf activities)", value:"VADS Lead", colSpan:2 },
+      ],
+    },
+    {
+      id:"ppe-checklist", icon:"Check", title:"PPE Checklist",
+      updatedBy:"Subhan Kiani", updatedByRole:"VADS Lead",
+      updatedAt:"20 Nov 2026, 09:00 PM (IST)",
+      fields:[
+        { label:"Composite toed shoes",   value:"Yes" },
+        { label:"Crush resistant gloves", value:"Yes" },
+        { label:"Safety vest",            value:"Yes" },
+        { label:"Hard hat",               value:"Yes" },
+        { label:"Hearing protection",     value:"Yes" },
+        { label:"Safety glasses",         value:"Yes" },
+        {
+          label:"Ppe verification photo (upload an image showing all ppe items confirmed as present)",
+          kind:"photo", title:"Photo", previousValues:2, colSpan:2,
+        },
+        { label:"Add extra ppe", value:"[]", previousValues:1, colSpan:2 },
+      ],
+    },
+    {
+      id:"stop-ish-loading", icon:"Clock", title:"Stop ISH Loading",
+      updatedBy:"Subhan Kiani", updatedByRole:"VADS Lead",
+      updatedAt:"20 Nov 2026, 06:24 PM (IST)",
+      fields:[
+        { label:"Loading end time", value:"2026-11-20, 07:27 AM" },
+      ],
+    },
+    {
+      id:"start-ish-loading", icon:"Clock", title:"Start ISH Loading",
+      updatedBy:"Subhan Kiani", updatedByRole:"VADS Lead",
+      updatedAt:"20 Nov 2026, 06:23 PM (IST)",
+      fields:[
+        { label:"Loading start time", value:"2026-11-20, 06:15 AM" },
+      ],
+    },
+    {
+      // Both fields ("Expected loading delay", "Delay reason") read NA and
+      // were dropped, so this step records only its timestamp.
+      id:"ish-loading", icon:"Truck", title:"ISH Loading",
+      updatedBy:"Subhan Kiani", updatedByRole:"VADS Lead",
+      updatedAt:"20 Nov 2026, 06:23 PM (IST)",
+      fields:[],
+    },
+    {
+      id:"arrival-at-ish", icon:"Pin", title:"Arrival at ISH",
+      updatedBy:"Subhan Kiani", updatedByRole:"VADS Lead",
+      updatedAt:"20 Nov 2026, 06:23 PM (IST)",
+      fields:[
+        { label:"Confirm the time you have arrived at the ish", value:"2026-11-20, 06:00 AM", colSpan:2 },
+      ],
+    },
+    {
+      id:"return-to-ish", icon:"Refresh", title:"Return to ISH (New)",
+      updatedBy:"Karianne Jackson", updatedByRole:"VADS Lead",
+      updatedAt:"25 Nov 2026, 01:27 AM (IST)",
+      fields:[
+        { label:"Eta to ish", value:"2026-11-24, 03:20 PM" },
+      ],
+    },
+    {
+      id:"next-stop", icon:"Pin", title:"Next Stop?", badge:"533",
+      updatedBy:"Karianne Jackson", updatedByRole:"VADS Lead",
+      updatedAt:"25 Nov 2026, 01:11 AM (IST)",
+      fields:[
+        { label:"Next stop?", value:"Return to ISH" },
+      ],
+    },
+    {
+      id:"upload-pod-copy", icon:"Folder", title:"Upload POD Copy", badge:"533", ai:true,
+      updatedBy:"Karianne Jackson", updatedByRole:"VADS Lead",
+      updatedAt:"25 Nov 2026, 01:11 AM (IST)",
+      aiDetectionCount:3,
+      fields:[
+        { label:"Upload pod copy", kind:"photo", title:"Photo", colSpan:2 },
+      ],
+    },
+  ];
 
-    return [
-      {
-        id:"driver",   icon:"Truck",    title:titles[0], state: stateFor(0),
-        updatedBy:"Ileana Marroquin",  updatedAt:"30 Apr 2026, 02:30 PM",
-        assets: assetsByStep[0],
-        fields:[
-          { label:"Pick Up Date",   value:`${15 + (i%10)} May 2026, 09:00 AM` },
-          { label:"Driver Name",    value:"Ronald Cox · 904-562-8158" },
-          { label:"QTR Pro Number", value:`37083${(i%10)}` },
-        ],
-      },
-      {
-        id:"vehicle",  icon:"Truck",    title:titles[1], state: stateFor(1),
-        updatedBy:"Ileana Marroquin",  updatedAt:"30 Apr 2026, 02:30 PM",
-        assets: assetsByStep[1],
-        fields:[
-          { label:"Truck Type",          value:"53ft FTL Dryvan" },
-          { label:"Truck Number",        value:"261234" },
-          { label:"Trailer Number",      value:"26159" },
-          { label:"License Plate Number",value:"IN3762026" },
-        ],
-      },
-      {
-        id:"vads",     icon:"Users",    title:titles[2], state: stateFor(2),
-        updatedBy:"Ileana Marroquin",  updatedAt:"30 Apr 2026, 02:30 PM",
-        assets: assetsByStep[2],
-        fields:[
-          { label:"VADS Lead",       value:"Greg Robinson · 5714222199" },
-          { label:"Labor Pro Number",value:"370836" },
-          { label:"VADS Crew",       value:"Joselyn Wright · Deirmon Riddick", colSpan:2 },
-        ],
-      },
-      {
-        id:"ops",      icon:"Phone",    title:titles[3], state: stateFor(3),
-        updatedBy:"Ileana Marroquin",  updatedAt:"30 Apr 2026, 02:30 PM",
-        assets: assetsByStep[3],
-        fields:[
-          { label:"POC Name",                     value:"Angela Cheang" },
-          { label:"POC Phone Number",             value:"703-309-4740" },
-          { label:"Truck Size",                   value:"NA" },
-          { label:"Delivery Information",         value:"NA" },
-          { label:"Floor Protection Required",    value:"NA" },
-          { label:"VAD Information",              value:"Must be in Avetta / Avetta Trained" },
-          { label:"Lift Gate Required",           value:"NA" },
-          { label:"Rally Point Information",      value:"Home Depot, 6315 Eastern Ave, Baltimore MD" },
-        ],
-      },
-      {
-        id:"validation", icon:"Check",  title:titles[4], state: stateFor(4),
-        updatedBy:"Ileana Marroquin",  updatedAt:"19 May 2026, 12:11 AM",
-        assets: assetsByStep[4],
-        fields:[
-          { label:"Are Pre Departure Tools Validated?", value:"Yes" },
-          { label:"Required Tools Present?",            value:"Yes" },
-          { label:"Required PPE Present?",              value:"Yes" },
-        ],
-      },
-      {
-        id:"sop",      icon:"Check",    title:titles[5], state: stateFor(5),
-        updatedBy:"Ileana Marroquin",  updatedAt:"19 May 2026, 12:10 AM",
-        assets: assetsByStep[5],
-        fields:[
-          { label:"Pre Departure SOP Validated?", value:"Yes" },
-        ],
-      },
-    ];
+  // Clone the real step list per transaction and stamp a workflow state on
+  // each step. Attached files stay randomised — the detail screenshots
+  // don't expose them, and the Assets card depends on them.
+  function buildActivities(client, i, rand) {
+    const cur = i % REAL_ACTIVITIES.length;
+    const stateFor = (idx) => idx < cur ? "done" : idx === cur ? "current" : "pending";
+
+    return REAL_ACTIVITIES.map((s, idx) => ({
+      ...s,
+      fields: s.fields.map(f => ({ ...f })),
+      state: stateFor(idx),
+      assets: pickAssetsForStep(s.title, i, rand),
+    }))
+    // Newest step first, matching the live platform's ordering.
+    .reverse();
   }
 
   const TRANSACTIONS = Array.from({ length: 48 }, (_, i) => {
@@ -377,3 +469,206 @@ window.CRANE_ALERTS = {
     { id:"t4", driver:"Lena Wallace",  shipment:"01920355", time:"48m ago",  preview:"Need a re-route, dealer is closed early", unread:1 },
   ],
 };
+
+/* ======================================================================
+ * CRANE_BOARD — REAL board data, transcribed from production screenshots
+ * of the Crane Worldwide · Transactions kanban (captured 25 Nov 2026).
+ *
+ * This is NOT generated mock data. Column names, counts, card titles,
+ * alert reasons, notification reasons, AI-detection matches, dates,
+ * activities and timestamps are exactly what the live platform showed.
+ *
+ * Where a screenshot clipped a value it is marked CLIPPED rather than
+ * invented.
+ * ==================================================================== */
+window.CRANE_BOARD = (() => {
+  const D = window.CRANE_DATA;
+
+  // Column header label + the real total count + the alert-count pill
+  // that floats above the column in the live board.
+  const COLUMNS = [
+    { key:"planning", label:"1. PLANNING / READY TO BOOK",         count:19,  alertCount:6  },
+    { key:"rally",    label:"2. RALLY / LOADING AT ISH",           count:0,   alertCount:0  },
+    { key:"delivery", label:"3. DELIVERY IN PROGRESS",             count:1,   alertCount:1  },
+    { key:"return",   label:"4. RETURN TO ISH",                    count:0,   alertCount:0  },
+    { key:"offload",  label:"5. ISH OFFLOAD / DELIVERY COMPLETED", count:205, alertCount:46 },
+    { key:"none",     label:"NO STATUS",                           count:0,   alertCount:0  },
+  ];
+
+  const PLANNING  = "1. PLANNING / READY TO BOOK";
+  const DELIVERY  = "3. DELIVERY IN PROGRESS";
+  const OFFLOAD   = "5. ISH OFFLOAD / DELIVERY COMPLETED";
+  const VADS_DONE = "VADS, Crew, Drivers & Vehicles Completed";
+
+  // Pre-departure tool / PPE alert set — identical text on both trucks
+  // that carry it in the screenshots.
+  const TOOL_ALERTS = [
+    "J Bar Missing",
+    "Socket Toolset Missing",
+    "Power Ratchet Missing",
+    "Standard Hand Tools Safety Tip Box Cutter Missing",
+    "18\" Bolt Cutters Missing",
+    "Wheel Chocks Missing",
+    "Pallet Jack Missing",
+    "Missing Assets",
+  ];
+
+  const VADS_REJECT = ["Assets Rejection (VADs)", "Assets Rejected (VADs)"];
+
+  const SCRAPED = [
+    // ── Column 1 · PLANNING / READY TO BOOK (19 total, 10 captured) ────
+    { col:0, title:"TRUCK 13-465325", deliveryDate:"25 Nov 2026", status:PLANNING, activity:VADS_DONE, updatedAt:"Nov 25, 2026, 03:53 AM" },
+    { col:0, title:"TRUCK 12-465324", deliveryDate:"25 Nov 2026", status:PLANNING, activity:VADS_DONE, updatedAt:"Nov 25, 2026, 03:53 AM" },
+    { col:0, title:"TRUCK 11-465323", deliveryDate:"25 Nov 2026", status:PLANNING, activity:VADS_DONE, updatedAt:"Nov 25, 2026, 03:53 AM" },
+    { col:0, title:"TRUCK 10-465322", deliveryDate:"25 Nov 2026", status:PLANNING, activity:VADS_DONE, updatedAt:"Nov 25, 2026, 03:52 AM" },
+    { col:0, title:"TRUCK 9-465321",  deliveryDate:"25 Nov 2026", status:PLANNING, activity:VADS_DONE, updatedAt:"Nov 25, 2026, 03:52 AM" },
+    { col:0, title:"TRUCK 8-465320",  deliveryDate:"25 Nov 2026", status:PLANNING, activity:VADS_DONE, updatedAt:"Nov 25, 2026, 03:52 AM" },
+    // CLIPPED: TRUCK 7 timestamp not visible; follows the 03:52 run above.
+    { col:0, title:"TRUCK 7-465319",  deliveryDate:"25 Nov 2026", status:PLANNING, activity:VADS_DONE, updatedAt:"Nov 25, 2026, 03:52 AM" },
+    { col:0, title:"TRUCK 3-465315",  deliveryDate:"25 Nov 2026", status:PLANNING, activity:VADS_DONE, updatedAt:"Nov 25, 2026, 03:52 AM" },
+    { col:0, title:"TRUCK 2-465314",  deliveryDate:"25 Nov 2026", status:PLANNING, activity:VADS_DONE, updatedAt:"Nov 25, 2026, 03:52 AM" },
+    { col:0, title:"TRUCK 1-465313",  deliveryDate:"25 Nov 2026", status:PLANNING, activity:VADS_DONE, updatedAt:"Nov 25, 2026, 03:51 AM" },
+
+    // ── Column 3 · DELIVERY IN PROGRESS (1 total, 1 captured) ──────────
+    {
+      col:2, title:"TRUCK 3-462772", status:DELIVERY,
+      alertCount:9,
+      alerts: TOOL_ALERTS.concat(["Missed Delivery Due Date"]),
+    },
+
+    // ── Column 5 · ISH OFFLOAD / DELIVERY COMPLETED (205, 6 captured) ──
+    {
+      col:4, title:"TRUCK 14-464628", status:OFFLOAD,
+      alertCount:8,
+      alerts: TOOL_ALERTS,
+    },
+    {
+      col:4, title:"TRUCK 13-464627",
+      // AI strings are CLIPPED by the live UI's own truncation.
+      ai: [
+        "The Signature of Shippe",
+        "The image shows a Cra",
+        "The bill of lading's Spec",
+      ],
+      aiMore: 3,
+      deliveryDate:"24 Nov 2026", status:OFFLOAD,
+      activity:"Return to ISH (New) Completed", updatedAt:"Nov 24, 2026, 11:42 PM",
+    },
+    {
+      col:4, title:"TRUCK 12-464626",
+      alertCount:2, alerts: VADS_REJECT,
+      ai: [
+        "The Signature of Shipp",
+        "The image is a Crane W",
+        "The Bill of Lading conta",
+      ],
+      deliveryDate:"24 Nov 2026", status:OFFLOAD,
+    },
+    {
+      col:4, title:"TRUCK 9-464623", status:OFFLOAD,
+      // Badge reads 6; the screenshot exposes 5 before the card is cut off.
+      alertCount:6,
+      alerts: VADS_REJECT.concat([
+        "Pre Offload Checklist - Truck not switched off",
+        "Pre Offload Checklist - VADs has not received the keys",
+        "Pre Offload Checklist - POC contact not initiated",
+      ]),
+    },
+    {
+      col:4, title:"TRUCK 4-464618",
+      notifCount:2,
+      notifications: ["Safety Glasses Missing", "J Bar Missing"],
+      ai: [
+        "The Signature of Shipp",
+        "The image is a Crane W",
+        "The Crane Worldwide L",
+      ],
+      deliveryDate:"24 Nov 2026", status:OFFLOAD,
+    },
+    {
+      col:4, title:"TRUCK 3-464617", status:OFFLOAD,
+      alertCount:2, alerts: VADS_REJECT,
+      ai: [
+        "The Shipper Signature/",
+        "The document is a Cran",
+        "The legible text on the",
+      ],
+    },
+
+    // ── Column 6 · NO STATUS (header count reads 0, 2 cards present) ───
+    { col:5, title:"TEST-P1-2", parent:"TEST-P1", activity:"TBD", updatedAt:"Nov 20, 2026, 05:18 PM" },
+    { col:5, title:"TEST-P1-1", parent:"TEST-P1", activity:"TBD", updatedAt:"Nov 20, 2026, 05:18 PM" },
+  ];
+
+  // Register Crane as a first-class client schema + stage set so the
+  // detail page, progress tracker and client filter all understand a
+  // board card the same way they understand a generated transaction.
+  D.CLIENT_SCHEMAS.crane = {
+    name:        "Crane Worldwide",
+    ref:         "Truck",
+    pickup:      "Pickup Date",
+    delivery:    "Delivery Date",
+    origin:      "Origin",
+    destination: "Destination",
+    driver:      "Driver",
+    site:        "Site Code",
+    eta:         "ETA",
+    stage:       "Status",
+    activity:    "Activity",
+  };
+  D.STAGE_LABELS.crane = COLUMNS.map(c => c.label);
+
+  // Hydrate each scraped card into a transaction-shaped object so a click
+  // still opens the existing detail page. Activity sections are cloned
+  // from the mock template — the board screenshots don't expose them.
+  const template = D.TRANSACTIONS[0];
+  const CARDS = SCRAPED.map((c, i) => {
+    const alerts        = c.alerts        || [];
+    const notifications = c.notifications || [];
+    const activities = JSON.parse(JSON.stringify(template.activities)).map(a => ({
+      ...a,
+      id: c.title + "-" + a.id,
+      assets: a.assets.map(x => ({ ...x, id: c.title + "-" + x.id })),
+    }));
+
+    return {
+      id: 9000 + i,
+      clientKey: "crane",
+      col: c.col,
+      stageIdx: c.col,
+      title: c.title,
+      parent: c.parent || null,
+
+      alerts,
+      alertCount: c.alertCount != null ? c.alertCount : alerts.length,
+      notifications,
+      notifCount: c.notifCount != null ? c.notifCount : notifications.length,
+      ai: c.ai || [],
+      aiMore: c.aiMore || 0,
+
+      deliveryDate: c.deliveryDate || "",
+      status:       c.status || "",
+      activity:     c.activity || "",
+      updatedAt:    c.updatedAt || "",
+
+      priority: null,
+      driver: { ...template.driver, onRoute: alerts.length === 0 },
+      values: {
+        ref:         c.title,
+        pickup:      "",
+        delivery:    c.deliveryDate || "",
+        origin:      "",
+        destination: "",
+        driver:      "",
+        site:        "",
+        eta:         "",
+        stage:       c.status || "",
+        activity:    c.activity || "",
+      },
+      activities,
+      assets: activities.flatMap(a => a.assets),
+    };
+  });
+
+  return { COLUMNS, CARDS };
+})();

@@ -200,160 +200,278 @@ function AlertLine({ reason, tone = "warning" }) {
 }
 
 // ─── KanbanView ──────────────────────────────────────────────────────────
+// The board renders the REAL production board (window.CRANE_BOARD), not the
+// generated TRANSACTIONS mock. `rows` is accepted for signature parity with
+// ListView but deliberately unused — the live board carries its own columns,
+// counts and card payloads.
 function KanbanView({ rows, onOpen }) {
-  // Build columns dynamically from rows. Each column = a stage index.
-  // Header label uses the dominant client's label, with a multi-client
-  // chip if mixed.
-  const cols = useMemo(() => {
-    return [0,1,2,3,4].map(stageIdx => {
-      const stageRows = rows.filter(r => r.stageIdx === stageIdx);
-      const clientCounts = {};
-      stageRows.forEach(r => { clientCounts[r.clientKey] = (clientCounts[r.clientKey] || 0) + 1; });
-      const clients = Object.keys(clientCounts);
-      const dominant = clients.sort((a,b) => clientCounts[b] - clientCounts[a])[0] || "indemni";
-      return {
-        idx: stageIdx,
-        label: STAGE_LABELS[dominant][stageIdx],
-        clients,
-        rows: stageRows,
-      };
-    });
-  }, [rows]);
+  const { COLUMNS, CARDS } = window.CRANE_BOARD;
+
+  const cols = useMemo(() => COLUMNS.map((c, i) => ({
+    ...c, idx: i, cards: CARDS.filter(card => card.col === i),
+  })), [COLUMNS, CARDS]);
 
   return (
-    <Box sx={{ display:"grid", gridTemplateColumns:"repeat(5, minmax(220px, 1fr))", gap:1, alignItems:"flex-start" }}>
-      {cols.map(col => (
-        <Box key={col.idx} sx={{
-          bgcolor:T.surface2, border:`1px solid ${T.borderSoft}`, borderRadius:"8px",
-          p:1, display:"flex", flexDirection:"column", gap:1, minHeight:400,
-        }}>
-          <Stack direction="row" alignItems="center" gap={0.75} sx={{ px:0.5 }}>
-            <Box sx={{ width:16, height:16, borderRadius:"4px", bgcolor:T.accentSoft, color:T.accent,
-              display:"inline-flex", alignItems:"center", justifyContent:"center",
-              fontSize:10, fontWeight:600 }}>{col.idx + 1}</Box>
-            <Box sx={{ flex:1, minWidth:0 }}>
-              <Typography sx={{ fontSize:12, fontWeight:600, color:T.fg, lineHeight:1.2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                {col.label}
-              </Typography>
-              {col.clients.length > 1 && (
-                <Typography sx={{ fontSize:9.5, color:T.fg4, lineHeight:1.1, mt:0.2 }}>
-                  + {col.clients.length - 1} other label{col.clients.length > 2 ? "s" : ""}
-                </Typography>
-              )}
-            </Box>
-            <Box sx={{ fontSize:10, color:T.fg3, bgcolor:"#fff", borderRadius:999, px:1, fontWeight:500 }}>
-              {col.rows.length}
-            </Box>
-          </Stack>
-
-          <Stack gap={0.75}>
-            {col.rows.slice(0, 6).map(r => <KanbanCard key={r.id} row={r} onOpen={onOpen}/>)}
-            {col.rows.length > 6 && (
-              <Box sx={{ fontSize:11, color:T.fg3, textAlign:"center", py:0.5, cursor:"pointer", "&:hover":{ color:T.accent } }}>
-                + {col.rows.length - 6} more
-              </Box>
-            )}
-            {col.rows.length === 0 && (
-              <Box sx={{ fontSize:11, color:T.fg4, textAlign:"center", py:2, border:`1px dashed ${T.border}`, borderRadius:"6px", bgcolor:"#fff" }}>
-                No transactions
-              </Box>
-            )}
-          </Stack>
-        </Box>
-      ))}
+    <Box sx={{
+      display:"grid",
+      gridTemplateColumns:`repeat(${cols.length}, minmax(236px, 1fr))`,
+      gap:1.25, alignItems:"flex-start",
+    }}>
+      {cols.map(col => <KanbanColumn key={col.key} col={col} onOpen={onOpen}/>)}
     </Box>
   );
 }
 
-function KanbanCard({ row, onOpen }) {
-  const schema = SCHEMAS[row.clientKey];
-  const v = row.values;
-  const hasAlerts = row.alerts && row.alerts.length > 0;
-  const hasNotifs = row.notifications && row.notifications.length > 0;
+function KanbanColumn({ col, onOpen }) {
+  const hidden = Math.max(0, col.count - col.cards.length);
 
-  // Border color priority: alerts > notifications > default.
-  const borderColor = hasAlerts ? T.warning : hasNotifs ? T.info : T.border;
+  return (
+    <Stack gap={0.75} sx={{ minWidth:0 }}>
+      {/* Alert-count pill that floats above the column header */}
+      <Box sx={{ height:20, display:"flex", justifyContent:"flex-end", pr:0.25 }}>
+        {col.alertCount > 0 && (
+          <Stack direction="row" alignItems="center" gap={0.35} sx={{
+            height:20, px:0.6, borderRadius:"5px",
+            bgcolor:T.alertBadgeBg, color:T.alertBadgeFg,
+            border:`1px solid ${T.alertLine}`,
+            fontSize:11, fontWeight:700, fontVariantNumeric:"tabular-nums",
+          }}>
+            <I.AlertTri size={11}/><span>{col.alertCount}</span>
+          </Stack>
+        )}
+      </Box>
 
-  const Field = ({ k }) => (
-    <Stack direction="row" justifyContent="space-between" alignItems="baseline" gap={1} sx={{ minWidth:0 }}>
-      <Typography sx={{ fontSize:10, color:T.fg4, fontWeight:500, flexShrink:0, textTransform:"uppercase", letterSpacing:"0.04em" }}>
-        {schema[k]}
-      </Typography>
-      <Typography sx={{ fontSize:12, color:T.fg, fontWeight:500, textAlign:"right", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", minWidth:0 }}>
-        {v[k]}
-      </Typography>
+      {/* Column header — label + total count pill */}
+      <Stack direction="row" alignItems="center" gap={0.75} sx={{
+        bgcolor:"#fff", border:`1px solid ${T.border}`,
+        borderTop:`2px solid ${T.boardGreen}`,
+        borderRadius:"6px", px:1, py:0.85, minHeight:34,
+      }}>
+        <Tooltip title={col.label} placement="top-start" arrow disableInteractive>
+          <Typography sx={{
+            flex:1, minWidth:0, fontSize:11.5, fontWeight:700, color:T.fg,
+            textTransform:"uppercase", letterSpacing:"0.01em",
+            whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+          }}>{col.label}</Typography>
+        </Tooltip>
+        <Box sx={{
+          bgcolor:T.boardGreen, color:"#fff", fontSize:11, fontWeight:700,
+          borderRadius:"5px", px:0.8, py:"1px", minWidth:24, textAlign:"center",
+          fontVariantNumeric:"tabular-nums", flexShrink:0,
+        }}>{col.count}</Box>
+      </Stack>
+
+      {/* Cards */}
+      <Stack gap={1} sx={{ minWidth:0 }}>
+        {col.cards.map(c => <KanbanCard key={c.id} card={c} onOpen={onOpen}/>)}
+
+        {col.cards.length === 0 && (
+          <Box sx={{
+            fontSize:11, color:T.fg4, textAlign:"center", py:2.5,
+            border:`1px dashed ${T.border}`, borderRadius:"8px", bgcolor:"#fff",
+          }}>No transactions</Box>
+        )}
+
+        {hidden > 0 && col.cards.length > 0 && (
+          <Box role="button" sx={{
+            fontSize:11, color:T.fg3, textAlign:"center", py:0.75, cursor:"pointer",
+            "&:hover": { color:T.accent },
+          }}>+ {hidden.toLocaleString()} more</Box>
+        )}
+      </Stack>
     </Stack>
   );
+}
+
+// Alert / notification count badge that sits on the card title row.
+function CountBadge({ tone, count }) {
+  const isAlert = tone === "alert";
+  return (
+    <Box sx={{ position:"relative", flexShrink:0, mt:0.1 }}>
+      <Box sx={{
+        width:20, height:20, borderRadius:"5px",
+        bgcolor: isAlert ? T.alertBadgeBg : T.notifBadgeBg,
+        color:   isAlert ? T.alertBadgeFg : T.notifBadgeFg,
+        display:"inline-flex", alignItems:"center", justifyContent:"center",
+      }}>
+        {isAlert ? <I.AlertTri size={13}/> : <I.BellFill size={13}/>}
+      </Box>
+      {count > 0 && (
+        <Box sx={{
+          position:"absolute", top:-6, right:-6, minWidth:15, height:15, px:"2px",
+          borderRadius:999, border:"1.5px solid #fff",
+          bgcolor: isAlert ? T.alertLine : T.notifBadgeFg, color:"#fff",
+          fontSize:9, fontWeight:700, lineHeight:1,
+          display:"inline-flex", alignItems:"center", justifyContent:"center",
+          fontVariantNumeric:"tabular-nums",
+        }}>{count}</Box>
+      )}
+    </Box>
+  );
+}
+
+// Numbered reason panel. Alerts render unboxed — the card's own red outline
+// carries the signal; notifications keep the mint fill the live board uses.
+// The acknowledge tick sits in the bottom-right corner.
+function ReasonPanel({ tone, title, items }) {
+  const isAlert = tone === "alert";
+  const bg   = isAlert ? "transparent"  : T.notifPanelBg;
+  const fg   = isAlert ? T.fg2          : T.notifPanelFg;
+  const head = isAlert ? T.fg2          : T.notifHeadFg;
+
+  return (
+    <Box sx={{ position:"relative", bgcolor:bg, borderRadius:"6px", px:1, pt:0.75, pb:2.4 }}>
+      <Stack direction="row" alignItems="center" gap={0.5} sx={{ mb:0.5 }}>
+        <Box sx={{ color:head, display:"inline-flex" }}>
+          {isAlert ? <I.AlertTri size={11}/> : <I.BellFill size={11}/>}
+        </Box>
+        <Typography sx={{
+          fontSize:10, fontWeight:700, color:head,
+          textTransform:"uppercase", letterSpacing:"0.05em",
+        }}>{title}</Typography>
+      </Stack>
+
+      <Stack gap={0.3}>
+        {items.map((t, i) => (
+          <Stack key={i} direction="row" gap={0.5} sx={{ minWidth:0 }}>
+            <Typography sx={{
+              fontSize:11, color:fg, lineHeight:1.35, fontWeight:600,
+              flexShrink:0, fontVariantNumeric:"tabular-nums",
+            }}>{i + 1}.</Typography>
+            <Typography sx={{ fontSize:11, color:fg, lineHeight:1.35, fontWeight:500, minWidth:0 }}>
+              {t}
+            </Typography>
+          </Stack>
+        ))}
+      </Stack>
+
+      <Tooltip title="Acknowledge" arrow disableInteractive>
+        <Box role="button" onClick={e => e.stopPropagation()} sx={{
+          position:"absolute", right:6, bottom:6, width:17, height:17,
+          borderRadius:999, bgcolor:T.ackGreen, color:"#fff",
+          display:"inline-flex", alignItems:"center", justifyContent:"center",
+          cursor:"pointer", "&:hover": { filter:"brightness(1.1)" },
+        }}><I.Tick size={11} strokeWidth={2.6}/></Box>
+      </Tooltip>
+    </Box>
+  );
+}
+
+// AI document-match panel.
+function AiPanel({ items, more }) {
+  return (
+    <Box sx={{ bgcolor:T.aiPanelBg, borderRadius:"6px", px:1, py:0.75 }}>
+      <Typography sx={{
+        fontSize:10, fontWeight:700, color:T.aiPanelFg, mb:0.45,
+        textTransform:"uppercase", letterSpacing:"0.05em",
+      }}>AI Detection</Typography>
+
+      <Stack gap={0.3}>
+        {items.map((t, i) => (
+          <Stack key={i} direction="row" alignItems="center" gap={0.6} sx={{ minWidth:0 }}>
+            <Box sx={{ width:5, height:5, borderRadius:999, bgcolor:T.ackGreen, flexShrink:0 }}/>
+            <Tooltip title={`Match — ${t}`} placement="top-start" arrow disableInteractive>
+              <Typography sx={{
+                fontSize:11, color:T.fg2, lineHeight:1.3, fontWeight:500, minWidth:0,
+                whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+              }}>Match — {t}</Typography>
+            </Tooltip>
+          </Stack>
+        ))}
+      </Stack>
+
+      {more > 0 && (
+        <Typography sx={{ fontSize:10.5, color:T.fg4, mt:0.45, ml:1.4 }}>+{more} more</Typography>
+      )}
+    </Box>
+  );
+}
+
+// Two-up label/value row at the foot of a card.
+function CardFieldPair({ a, b }) {
+  const Cell = ({ label, value }) => (
+    <Box sx={{ minWidth:0 }}>
+      <Typography sx={{
+        fontSize:9, color:T.fg4, fontWeight:600, lineHeight:1.2,
+        textTransform:"uppercase", letterSpacing:"0.05em",
+      }}>{label}</Typography>
+      <Typography sx={{ fontSize:11.5, color:T.fg, fontWeight:500, lineHeight:1.3, mt:0.15 }}>
+        {value || "—"}
+      </Typography>
+    </Box>
+  );
+  return (
+    <Box sx={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:1, minWidth:0 }}>
+      <Cell {...a}/><Cell {...b}/>
+    </Box>
+  );
+}
+
+function KanbanCard({ card, onOpen }) {
+  const hasAlerts = card.alerts.length > 0;
+  const hasNotifs = card.notifications.length > 0;
+  const hasAi     = card.ai.length > 0;
+
+  // Alert cards are outlined in red all round; notification-only cards keep
+  // the green left edge; everything else is a plain card.
+  const edge = !hasAlerts && hasNotifs ? T.notifLine : null;
 
   return (
     <Box
-      onClick={() => onOpen && onOpen(row)}
+      onClick={() => onOpen && onOpen(card)}
       sx={{
-        bgcolor:"#fff", border:`1px solid ${borderColor}`,
-        borderRadius:"8px", p:1.1, display:"flex", flexDirection:"column", gap:0.6,
-        boxShadow: hasAlerts || hasNotifs ? "0 1px 2px rgba(15,23,42,.04)" : "0 1px 2px rgba(15,23,42,.03)",
-        cursor:"pointer", transition:"all 100ms",
-        "&:hover": { borderColor: borderColor === T.border ? T.borderStrong : borderColor, transform:"translateY(-1px)", boxShadow:"0 2px 6px rgba(15,23,42,.06)" },
+        bgcolor:"#fff",
+        border:`1px solid ${hasAlerts ? T.error : T.border}`,
+        ...(edge ? { borderLeft:`3px solid ${edge}` } : null),
+        borderRadius:"8px",
+        p:1, display:"flex", flexDirection:"column", gap:0.75,
+        boxShadow:"0 1px 2px rgba(15,23,42,.04)", cursor:"pointer",
+        transition:"box-shadow 110ms, transform 110ms",
+        "&:hover": { boxShadow:"0 2px 8px rgba(15,23,42,.08)", transform:"translateY(-1px)" },
       }}>
-      {/* Header — dynamic ref label + ref value, with optional priority pill */}
-      <Stack direction="row" alignItems="baseline" gap={0.75}>
-        <Typography sx={{ fontSize:10, color:T.fg4, fontWeight:500, textTransform:"uppercase", letterSpacing:"0.04em" }}>
-          {schema.ref}
-        </Typography>
-        <Box sx={{ flex:1 }}/>
-        {row.priority && (
-          <Box sx={{ fontSize:9, fontWeight:700, color: row.priority==="HVL" ? T.error : T.warning, bgcolor: row.priority==="HVL" ? T.errorBg : T.warningBg, px:0.5, borderRadius:"3px" }}>
-            {row.priority.toUpperCase()}
-          </Box>
-        )}
-      </Stack>
-      <Typography sx={{ fontSize:15, fontWeight:600, color:T.fg, letterSpacing:"-0.01em", fontVariantNumeric:"tabular-nums", lineHeight:1.1, mt:-0.4 }}>
-        {v.ref}
-      </Typography>
 
-      <Divider sx={{ my:0.3 }}/>
-
-      <Stack gap={0.45}>
-        <Field k="delivery"/>
-        <Field k="destination"/>
-      </Stack>
-
-      {/* Alerts section — all reasons stacked; icon only on the heading */}
-      {hasAlerts && (
-        <Box sx={{ bgcolor: T.warningSoft || "#FDF7EC", borderRadius:"6px", p:0.85, mt:0.3 }}>
-          <Stack direction="row" alignItems="center" gap={0.5} sx={{ mb:0.45 }}>
-            <Box sx={{ color: T.warning, display:"inline-flex" }}><I.Alert size={12}/></Box>
-            <Typography sx={{ fontSize:10, color:T.warning, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.04em" }}>
-              {row.alerts.length === 1 ? "Alert" : `${row.alerts.length} Alerts`}
+      {/* Title · copy · badge */}
+      <Stack direction="row" alignItems="flex-start" gap={0.75}>
+        <Box sx={{ flex:1, minWidth:0 }}>
+          <Typography sx={{
+            fontSize:12.5, fontWeight:700, color:T.fg, lineHeight:1.2,
+            letterSpacing:"-0.004em",
+            whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+          }}>{card.title}</Typography>
+          {card.parent && (
+            <Typography sx={{ fontSize:10, color:T.fg4, lineHeight:1.3, mt:0.3, letterSpacing:"0.03em" }}>
+              PARENT:{" "}
+              <Box component="span" sx={{ color:T.fg2, fontWeight:600 }}>{card.parent}</Box>
             </Typography>
-          </Stack>
-          <Stack component="ul" gap={0.3} sx={{ pl: 1.75, my: 0, "& li::marker": { color: T.warning } }}>
-            {row.alerts.map((reason, idx) => (
-              <Box key={idx} component="li" sx={{ fontSize:11.5, color:T.fg, lineHeight:1.35, fontWeight:500 }}>
-                {reason}
-              </Box>
-            ))}
-          </Stack>
+          )}
         </Box>
+
+        <Tooltip title="Copy reference" arrow disableInteractive>
+          <Box role="button" onClick={e => e.stopPropagation()} sx={{
+            color:T.fg5, display:"inline-flex", flexShrink:0, mt:0.15,
+            cursor:"pointer", "&:hover": { color:T.fg3 },
+          }}><I.Copy size={13}/></Box>
+        </Tooltip>
+
+        {hasAlerts && <CountBadge tone="alert" count={card.alertCount}/>}
+        {!hasAlerts && hasNotifs && <CountBadge tone="notif" count={card.notifCount}/>}
+      </Stack>
+
+      {hasAlerts && <ReasonPanel tone="alert" title="Alert Reasons"        items={card.alerts}/>}
+      {hasNotifs && <ReasonPanel tone="notif" title="Notification Reasons" items={card.notifications}/>}
+      {hasAi     && <AiPanel items={card.ai} more={card.aiMore}/>}
+
+      {(card.deliveryDate || card.status) && (
+        <CardFieldPair
+          a={{ label:"Delivery Date", value:card.deliveryDate }}
+          b={{ label:"Status",        value:card.status }}
+        />
       )}
-
-      {/* Notifications section — info icon + blue treatment */}
-      {hasNotifs && (
-        <Box sx={{ bgcolor: T.infoSoft || "#F1F6FE", borderRadius:"6px", p:0.85, mt: hasAlerts ? 0 : 0.3 }}>
-          <Stack direction="row" alignItems="center" gap={0.5} sx={{ mb:0.45 }}>
-            <Box sx={{ color: T.info, display:"inline-flex" }}><I.Info size={12}/></Box>
-            <Typography sx={{ fontSize:10, color:T.info, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.04em" }}>
-              {row.notifications.length === 1 ? "Update" : `${row.notifications.length} Updates`}
-            </Typography>
-          </Stack>
-          <Stack component="ul" gap={0.3} sx={{ pl: 1.75, my: 0, "& li::marker": { color: T.info } }}>
-            {row.notifications.map((reason, idx) => (
-              <Box key={idx} component="li" sx={{ fontSize:11.5, color:T.fg, lineHeight:1.35, fontWeight:500 }}>
-                {reason}
-              </Box>
-            ))}
-          </Stack>
-        </Box>
+      {(card.activity || card.updatedAt) && (
+        <CardFieldPair
+          a={{ label:"Activity",        value:card.activity }}
+          b={{ label:"Last Updated At", value:card.updatedAt }}
+        />
       )}
     </Box>
   );
