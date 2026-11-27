@@ -14,7 +14,7 @@ const theme = window.craneTheme;
 const T = window.CRANE_TOKENS;
 const I = window.I;
 const { TRANSACTIONS } = window.CRANE_DATA;
-const { Sidebar, Topbar, KpiStrip, FilterBar, ListView, KanbanView, AlertsDrawer, TransactionDetail } = window;
+const { Sidebar, Topbar, KpiStrip, FilterBar, ListView, KanbanView, AlertsDrawer, TransactionDetail, Segmented } = window;
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "view": "list",
@@ -39,6 +39,9 @@ function App() {
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [tweaksOpen, setTweaksOpen] = useState(false);
   const [selectedTxn, setSelectedTxn] = useState(null);
+  // Full-screen canvas: sidebar, topbar and KPI strip step aside so only the
+  // list / kanban canvas is on screen.
+  const [fullscreen, setFullscreen] = useState(false);
 
   // Tweaks panel host protocol
   useEffect(() => {
@@ -75,7 +78,7 @@ function App() {
         <Box sx={{
           minHeight:"100vh", display:"flex", overflow:"hidden", bgcolor:"#fff",
         }}>
-          <Sidebar
+          {!fullscreen && <Sidebar
             active={active}
             pinned={tweaks.sidebarPinned}
             onTogglePin={() => setTweak("sidebarPinned", !tweaks.sidebarPinned)}
@@ -84,50 +87,63 @@ function App() {
               setActive(id);
               if (id === "alerts") setAlertsOpen(true);
             }}
-          />
+          />}
 
           <Box sx={{ flex:1, minWidth:0, display:"flex", flexDirection:"column" }}>
             {selectedTxn ? (
               <TransactionDetail tx={selectedTxn} onBack={() => setSelectedTxn(null)}/>
             ) : (
               <React.Fragment>
-                <Topbar
-                  title="Current Transactions"
-                  totalCount={rows.length}
-                  search={search} onSearch={setSearch}
-                  clientFilter={clientFilter} onClientFilter={setClientFilter}
-                  statusFilter={statusFilter} onStatusFilter={setStatusFilter}
-                  view={tweaks.view} onView={(v) => setTweak("view", v)}
-                  onExport={() => {}}
-                  onAdd={() => {}}
-                />
+                {fullscreen ? (
+                  <Stack direction="row" alignItems="center" gap={1.5} sx={{
+                    px:2, py:1, minHeight:46, bgcolor:"#fff",
+                    borderBottom:`1px solid ${T.border}`,
+                  }}>
+                    <Typography sx={{ fontSize:15, fontWeight:600, color:T.fg, letterSpacing:"-0.012em" }}>
+                      Current Transactions
+                    </Typography>
+                    <Box sx={{ fontSize:11, fontWeight:500, bgcolor:T.surface3, color:T.fg2, px:0.8, py:"1px", borderRadius:"4px" }}>
+                      {rows.length.toLocaleString()}
+                    </Box>
+                    <Box sx={{ flex:1 }}/>
+                    <Segmented
+                      value={tweaks.view} onChange={(v) => setTweak("view", v)}
+                      options={[
+                        { value:"list",   iconOnly:true, icon:<I.List size={14}/> },
+                        { value:"kanban", iconOnly:true, icon:<I.Grid size={14}/> },
+                      ]}
+                    />
+                    <Box role="button" onClick={() => setFullscreen(false)} sx={{
+                      display:"inline-flex", alignItems:"center", gap:0.5,
+                      height:30, px:1.25, borderRadius:"6px", cursor:"pointer",
+                      border:`1px solid ${T.border}`, color:T.fg2, fontSize:12, fontWeight:500,
+                      "&:hover": { bgcolor:T.surface2, color:T.fg },
+                    }}>
+                      <I.Close size={13}/> Exit Full Screen
+                    </Box>
+                  </Stack>
+                ) : (
+                  <Topbar
+                    title="Current Transactions"
+                    totalCount={rows.length}
+                    search={search} onSearch={setSearch}
+                    clientFilter={clientFilter} onClientFilter={setClientFilter}
+                    statusFilter={statusFilter} onStatusFilter={setStatusFilter}
+                    view={tweaks.view} onView={(v) => setTweak("view", v)}
+                    fullscreen={fullscreen} onFullscreen={setFullscreen}
+                    onExport={() => {}}
+                    onAdd={() => {}}
+                  />
+                )}
 
-                <Box sx={{ flex:1, px:2, py:1.5, overflow:"auto", bgcolor: T.pageBg }}>
-                  {tweaks.showKpis && <KpiStrip/>}
-
-                  {/* Active filter chips (when something is filtered) */}
-                  {(clientFilter !== "all" || statusFilter !== "all" || search) && (
-                    <Stack direction="row" alignItems="center" gap={0.75} sx={{ mb:1.25, flexWrap:"wrap" }}>
-                      <Typography sx={{ fontSize:11, color:T.fg3, fontWeight:500 }}>Filters:</Typography>
-                      {clientFilter !== "all" && (
-                        <FilterChip label={`Client: ${window.CRANE_DATA.CLIENT_SCHEMAS[clientFilter].name}`} onRemove={() => setClientFilter("all")}/>
-                      )}
-                      {statusFilter !== "all" && (
-                        <FilterChip label={`Status: ${window.CRANE_DATA.STATUS_LABEL[statusFilter]}`} onRemove={() => setStatusFilter("all")}/>
-                      )}
-                      {search && (
-                        <FilterChip label={`Search: "${search}"`} onRemove={() => setSearch("")}/>
-                      )}
-                      <Box
-                        role="button"
-                        onClick={() => { setClientFilter("all"); setStatusFilter("all"); setSearch(""); }}
-                        sx={{ fontSize:11, color:T.accent, fontWeight:500, cursor:"pointer", "&:hover": { textDecoration:"underline" } }}
-                      >Clear all</Box>
-                    </Stack>
-                  )}
+                <Box sx={{
+                  flex:1, minHeight:0, px:2, py:1.5, overflow:"auto", bgcolor: T.pageBg,
+                  display:"flex", flexDirection:"column",
+                }}>
+                  {tweaks.showKpis && !fullscreen && <KpiStrip/>}
 
                   {tweaks.view === "list"
-                    ? <ListView rows={rows} onOpen={setSelectedTxn}/>
+                    ? <ListView rows={rows} onOpen={setSelectedTxn} clientKey={clientFilter}/>
                     : <KanbanView rows={rows} onOpen={setSelectedTxn}/>
                   }
                 </Box>
@@ -144,21 +160,6 @@ function App() {
         }}/>}
       </Box>
     </ThemeProvider>
-  );
-}
-
-function FilterChip({ label, onRemove }) {
-  return (
-    <Box sx={{
-      display:"inline-flex", alignItems:"center", gap:0.5,
-      bgcolor:T.accentSoft, color:T.accent, borderRadius:"5px",
-      pl:1, pr:0.5, py:0.25, fontSize:11, fontWeight:500,
-    }}>
-      <span>{label}</span>
-      <Box role="button" onClick={onRemove} sx={{
-        width:14, height:14, borderRadius:999, display:"inline-flex", alignItems:"center", justifyContent:"center", cursor:"pointer", "&:hover": { bgcolor:"rgba(0,0,0,.06)" }
-      }}><I.Close size={10}/></Box>
-    </Box>
   );
 }
 

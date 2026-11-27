@@ -32,6 +32,7 @@ const CRANE = {
 
   // -- Production board (kanban) tokens, matched to the live platform --
   accentRing:    "rgba(25, 87, 255, 0.22)",
+  rowHover:      "#FFFBEF",
   boardGreen:    "#17804A",
   ackGreen:      "#17A06B",
 

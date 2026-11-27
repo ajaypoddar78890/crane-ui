@@ -20,6 +20,7 @@ window.CRANE_DATA = (() => {
       eta:        "ETA",
       stage:      "Stage",
       activity:   "Activity",
+      updatedBy:  "Last Updated By",
     },
     fedex: {
       name: "FedEx Custom",
@@ -33,6 +34,7 @@ window.CRANE_DATA = (() => {
       eta:        "ETA",
       stage:      "Scan Status",
       activity:   "Last Scan",
+      updatedBy:  "Last Updated By",
     },
     bmw: {
       name: "BMW Logistics",
@@ -46,6 +48,7 @@ window.CRANE_DATA = (() => {
       eta:        "ETA",
       stage:      "Phase",
       activity:   "Update",
+      updatedBy:  "Last Updated By",
     },
   };
 
@@ -355,6 +358,16 @@ window.CRANE_DATA = (() => {
     .reverse();
   }
 
+  // Operators who can be the last to touch a transaction, shown with the
+  // clock time of that touch: "Ajay · 03:53 AM".
+  const UPDATERS = ["Suraj", "Ajay", "Tanushree"];
+  const clockTime = (r) => {
+    const h24 = Math.floor(r * 24);
+    const min = Math.floor((r * 1440) % 60);
+    const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+    return `${String(h12).padStart(2,"0")}:${String(min).padStart(2,"0")} ${h24 < 12 ? "AM" : "PM"}`;
+  };
+
   const TRANSACTIONS = Array.from({ length: 48 }, (_, i) => {
     const clientKey = ["indemni","fedex","bmw"][i % 3];
     const status = pick(STATUS);
@@ -429,6 +442,7 @@ window.CRANE_DATA = (() => {
         site:        dest[0],
         eta:         `${Math.floor(rand()*9)+1}h ${Math.floor(rand()*60)}m`,
         stage:       STAGE_LABELS[clientKey][stageIdx],
+        updatedBy:   `${pick(UPDATERS)} · ${clockTime(rand())}`,
         activity:    pick([
           "Driver Assignment Completed","VADS Crew Loading",
           "BOL Signed at Pickup","Photo Evidence Pending",
@@ -487,12 +501,12 @@ window.CRANE_BOARD = (() => {
   // Column header label + the real total count + the alert-count pill
   // that floats above the column in the live board.
   const COLUMNS = [
-    { key:"planning", label:"1. PLANNING / READY TO BOOK",         count:19,  alertCount:6  },
-    { key:"rally",    label:"2. RALLY / LOADING AT ISH",           count:0,   alertCount:0  },
-    { key:"delivery", label:"3. DELIVERY IN PROGRESS",             count:1,   alertCount:1  },
-    { key:"return",   label:"4. RETURN TO ISH",                    count:0,   alertCount:0  },
-    { key:"offload",  label:"5. ISH OFFLOAD / DELIVERY COMPLETED", count:205, alertCount:46 },
-    { key:"none",     label:"NO STATUS",                           count:0,   alertCount:0  },
+    { key:"planning", icon:"List",  label:"1. PLANNING / READY TO BOOK",         count:19,  alertCount:6  },
+    { key:"rally",    icon:"Check", label:"2. RALLY / LOADING AT ISH",           count:0,   alertCount:0  },
+    { key:"delivery", icon:"Truck", label:"3. DELIVERY IN PROGRESS",             count:1,   alertCount:1  },
+    { key:"return",   icon:"Pin",   label:"4. RETURN TO ISH",                    count:0,   alertCount:0  },
+    { key:"offload",  icon:"Box1",  label:"5. ISH OFFLOAD / DELIVERY COMPLETED", count:205, alertCount:46 },
+    { key:"none",     icon:"Help",  label:"NO STATUS",                           count:0,   alertCount:0  },
   ];
 
   const PLANNING  = "1. PLANNING / READY TO BOOK";
@@ -615,12 +629,20 @@ window.CRANE_BOARD = (() => {
     eta:         "ETA",
     stage:       "Status",
     activity:    "Activity",
+    updatedBy:   "Last Updated By",
   };
   D.STAGE_LABELS.crane = COLUMNS.map(c => c.label);
 
   // Hydrate each scraped card into a transaction-shaped object so a click
   // still opens the existing detail page. Activity sections are cloned
   // from the mock template — the board screenshots don't expose them.
+  const BOARD_UPDATERS = ["Suraj", "Ajay", "Tanushree"];
+  // Board cards already carry a full timestamp — reuse its clock part so the
+  // name reads the same way as on a generated transaction.
+  const withTime = (name, stamp) => {
+    const m = /(\d{1,2}:\d{2}\s?[AP]M)/i.exec(stamp || "");
+    return m ? `${name} · ${m[1]}` : name;
+  };
   const template = D.TRANSACTIONS[0];
   const CARDS = SCRAPED.map((c, i) => {
     const alerts        = c.alerts        || [];
@@ -650,6 +672,7 @@ window.CRANE_BOARD = (() => {
       status:       c.status || "",
       activity:     c.activity || "",
       updatedAt:    c.updatedAt || "",
+      updatedBy:    withTime(c.updatedBy || BOARD_UPDATERS[i % BOARD_UPDATERS.length], c.updatedAt),
 
       priority: null,
       driver: { ...template.driver, onRoute: alerts.length === 0 },
@@ -664,6 +687,7 @@ window.CRANE_BOARD = (() => {
         eta:         "",
         stage:       c.status || "",
         activity:    c.activity || "",
+        updatedBy:   withTime(c.updatedBy || BOARD_UPDATERS[i % BOARD_UPDATERS.length], c.updatedAt),
       },
       activities,
       assets: activities.flatMap(a => a.assets),

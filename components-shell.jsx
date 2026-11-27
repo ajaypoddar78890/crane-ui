@@ -305,9 +305,12 @@ function Topbar({
   statusFilter, onStatusFilter,
   // view + actions (row 1, right side)
   view, onView,
+  fullscreen, onFullscreen,
   onExport, onAdd,
 }) {
   const { CLIENT_SCHEMAS, STATUS_LABEL } = window.CRANE_DATA;
+  const hasFilters = clientFilter !== "all" || statusFilter !== "all" || !!search;
+  const clearAll = () => { onClientFilter("all"); onStatusFilter("all"); onSearch(""); };
 
   return (
     <Stack sx={{ borderBottom: `1px solid ${T.border}`, bgcolor:"#fff" }}>
@@ -337,6 +340,8 @@ function Topbar({
             { value:"kanban", iconOnly:true, icon:<I.Grid size={14}/> },
           ]}
         />
+
+        <ViewMenu fullscreen={fullscreen} onFullscreen={onFullscreen}/>
 
         <Button variant="outlined" color="primary" startIcon={<I.Download size={13}/>} sx={{ minHeight:30 }} onClick={onExport}>
           Export
@@ -383,8 +388,75 @@ function Topbar({
         <Button startIcon={<I.Filter size={13}/>} variant="text" sx={{ color:T.fg2, minHeight:30, ml:-0.5 }}>
           More Filters
         </Button>
+
+        {/* Active filters — chips live here rather than in a strip of their own */}
+        {hasFilters && (
+          <React.Fragment>
+            <Box sx={{ width:"1px", height:20, bgcolor:T.border, mx:0.25 }}/>
+            {clientFilter !== "all" && (
+              <FilterChip label={`Client: ${CLIENT_SCHEMAS[clientFilter].name}`} onRemove={() => onClientFilter("all")}/>
+            )}
+            {statusFilter !== "all" && (
+              <FilterChip label={`Status: ${STATUS_LABEL[statusFilter]}`} onRemove={() => onStatusFilter("all")}/>
+            )}
+            {search && (
+              <FilterChip label={`Search: "${search}"`} onRemove={() => onSearch("")}/>
+            )}
+            <Box role="button" onClick={clearAll} sx={{
+              fontSize:11, color:T.fg3, fontWeight:500, cursor:"pointer",
+              "&:hover": { color:T.fg, textDecoration:"underline" },
+            }}>Clear all</Box>
+          </React.Fragment>
+        )}
       </Stack>
     </Stack>
+  );
+}
+
+// "More views" dropdown — carries the full-screen canvas mode, where the
+// sidebar, topbar and KPI strip step aside and only the board / list shows.
+function ViewMenu({ fullscreen, onFullscreen }) {
+  const [anchor, setAnchor] = useState(null);
+  return (
+    <React.Fragment>
+      <Button
+        variant="outlined" color="primary"
+        endIcon={<I.ChevronD size={13}/>}
+        sx={{ minHeight:30, color:T.fg2, borderColor:T.border }}
+        onClick={e => setAnchor(e.currentTarget)}
+      >More views</Button>
+      <Menu
+        anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical:"bottom", horizontal:"right" }}
+        transformOrigin={{ vertical:"top", horizontal:"right" }}
+      >
+        <MenuItem onClick={() => { setAnchor(null); onFullscreen && onFullscreen(!fullscreen); }}>
+          <ListItemIcon sx={{ color:T.fg2, minWidth:"auto", mr:1 }}><I.Expand size={14}/></ListItemIcon>
+          <ListItemText primaryTypographyProps={{ fontSize:13 }}>
+            {fullscreen ? "Exit Full Screen" : "Full Screen"}
+          </ListItemText>
+        </MenuItem>
+      </Menu>
+    </React.Fragment>
+  );
+}
+
+// Removable chip for one active filter.
+function FilterChip({ label, onRemove }) {
+  return (
+    <Box sx={{
+      display:"inline-flex", alignItems:"center", gap:0.5,
+      bgcolor:T.surface3, color:T.fg2, border:`1px solid ${T.border}`,
+      borderRadius:"5px", pl:1, pr:0.5, py:0.2, fontSize:11, fontWeight:500,
+      whiteSpace:"nowrap",
+    }}>
+      <span>{label}</span>
+      <Box role="button" onClick={onRemove} sx={{
+        width:14, height:14, borderRadius:999, display:"inline-flex",
+        alignItems:"center", justifyContent:"center", cursor:"pointer",
+        "&:hover": { bgcolor:"rgba(0,0,0,.08)" },
+      }}><I.Close size={10}/></Box>
+    </Box>
   );
 }
 
@@ -442,6 +514,7 @@ function KpiStrip() {
 
 window.Sidebar = Sidebar;
 window.Topbar = Topbar;
+window.Segmented = Segmented;
 window.KpiStrip = KpiStrip;
 window.StatusPill = StatusPill;
 window.CRANE_STATUS_COLORS = STATUS_COLORS;

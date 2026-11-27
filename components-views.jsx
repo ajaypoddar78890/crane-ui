@@ -21,12 +21,15 @@ const TONES  = window.CRANE_DATA.STATUS_TONE;
 const SCHEMAS = window.CRANE_DATA.CLIENT_SCHEMAS;
 const STAGE_LABELS = window.CRANE_DATA.STAGE_LABELS;
 
-// Each row shows label-with-value cells so dynamic per-client labels are
-// handled gracefully. No shared column header.
+// Label placement depends on the client filter. With one client selected
+// every row shares the same field names, so the labels are lifted into a
+// single header row. With "All clients" the names differ row by row, so the
+// header is dropped and each cell carries its own label instead.
 
-function ListView({ rows, onOpen }) {
+function ListView({ rows, onOpen, clientKey = "all" }) {
   // Single density only (cozy ~58px min). Rows can grow to fit alert lists.
-  const MIN_W = 1080;
+  const MIN_W = 1210;
+  const schema = clientKey !== "all" ? SCHEMAS[clientKey] : null;
 
   return (
     <Box sx={{
@@ -34,20 +37,24 @@ function ListView({ rows, onOpen }) {
       overflow:"hidden", boxShadow:"0 1px 2px rgba(15,23,42,.03)",
     }}>
      <Box sx={{ overflowX:"auto" }}>
-      {/* hairline header — generic categories so dynamic labels still fit */}
-      <Stack direction="row" alignItems="center" gap={1.5} sx={{
-        px:1.75, py:0.7, bgcolor:T.surface2, borderBottom:`1px solid ${T.border}`,
-        fontSize:10, color:T.fg3, fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase",
-        minWidth: MIN_W,
-      }}>
-        <Box sx={{ width: 170 }}>Reference</Box>
-        <Box sx={{ width: 120 }}>Schedule</Box>
-        <Box sx={{ width: 200 }}>Destination</Box>
-        <Box sx={{ width: 150 }}>Stage</Box>
-        <Box sx={{ width: 130 }}>Status</Box>
-        <Box sx={{ flex:1, minWidth: 220 }}>Alerts & Updates</Box>
-        <Box sx={{ width: 56 }}/>
-      </Stack>
+      {/* Header carries the selected client's own field names. */}
+      {schema && (
+        <Stack direction="row" alignItems="center" gap={1.5} sx={{
+          px:1.75, py:0.7, bgcolor:T.surface2, borderBottom:`1px solid ${T.border}`,
+          borderLeft:"3px solid transparent",
+          fontSize:10, color:T.fg3, fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase",
+          minWidth: MIN_W,
+        }}>
+          <Box sx={{ width: 170 }}>{schema.ref}</Box>
+          <Box sx={{ width: 120 }}>{schema.delivery}</Box>
+          <Box sx={{ width: 200 }}>{schema.destination}</Box>
+          <Box sx={{ width: 150 }}>{schema.stage}</Box>
+          <Box sx={{ width: 130 }}>Status</Box>
+          <Box sx={{ width: 130 }}>{schema.updatedBy}</Box>
+          <Box sx={{ flex:1, minWidth: 220 }}>Alerts & Updates</Box>
+          <Box sx={{ width: 56 }}/>
+        </Stack>
+      )}
 
       {rows.map((r, i) => (
         <ListRow
@@ -55,6 +62,7 @@ function ListView({ rows, onOpen }) {
           minWidth={MIN_W}
           onOpen={onOpen}
           last={i === rows.length-1}
+          showLabels={!schema}
         />
       ))}
      </Box>
@@ -77,30 +85,35 @@ function ListView({ rows, onOpen }) {
   );
 }
 
-function ListRow({ row, minWidth=1080, onOpen, last }) {
+function ListRow({ row, minWidth=1210, onOpen, last, showLabels=true }) {
   const schema = SCHEMAS[row.clientKey];
   const v = row.values;
   const stageLabel = STAGE_LABELS[row.clientKey][row.stageIdx];
   const hasAlerts = row.alerts && row.alerts.length > 0;
   const hasNotifs = row.notifications && row.notifications.length > 0;
 
-  // Row tint priority: alerts (warning) > notifications (info) > none.
+  // Row edge priority: alerts (red, matching the board card) > notifications
+  // (info blue) > none. Alert rows carry no fill — the red edge is the signal.
   const tint = hasAlerts
-    ? { border: T.warning,        bg: "#FEF8EF", bgHover: "#FCF1DF" }
+    ? { border: T.error,          bg: "transparent", bgHover: T.rowHover }
     : hasNotifs
-    ? { border: T.info,           bg: "#F1F6FE", bgHover: "#E5EEFD" }
-    : { border: "transparent",    bg: "transparent", bgHover: T.surface2 };
+    ? { border: T.info,           bg: "#F1F6FE", bgHover: T.rowHover }
+    : { border: "transparent",    bg: "transparent", bgHover: T.rowHover };
 
   // Field cell: tiny client-specific label on top of value (handles mixed labels).
-  const Cell = ({ k, value, label, sx, mono=false }) => (
+  const Cell = ({ k, value, label, sx, mono=false, wrap=false }) => (
     <Box sx={{ display:"flex", flexDirection:"column", minWidth:0, lineHeight: 1.15, ...sx }}>
-      <Typography sx={{ fontSize: 10, color:T.fg4, lineHeight:1.1, fontWeight:500, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", textTransform:"uppercase", letterSpacing:"0.04em" }}>
-        {label || schema[k]}
-      </Typography>
+      {showLabels && (
+        <Typography sx={{ fontSize: 10, color:T.fg4, lineHeight:1.1, fontWeight:500, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", textTransform:"uppercase", letterSpacing:"0.04em" }}>
+          {label || schema[k]}
+        </Typography>
+      )}
       <Typography sx={{
         fontSize: 13, color:T.fg, fontWeight: mono ? 600 : 500, lineHeight: 1.3, mt: 0.2,
         fontVariantNumeric: mono ? "tabular-nums" : "normal",
-        whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+        ...(wrap
+          ? { whiteSpace:"normal", wordBreak:"break-word" }
+          : { whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }),
       }}>
         {value !== undefined ? value : v[k]}
       </Typography>
@@ -115,7 +128,7 @@ function ListRow({ row, minWidth=1080, onOpen, last }) {
         borderBottom: last ? 0 : `1px solid ${T.borderSoft}`,
         borderLeft: `3px solid ${tint.border}`,
         bgcolor: tint.bg,
-        transition:"background 100ms",
+        transition:"background 180ms ease",
         "&:hover": { bgcolor: tint.bgHover },
         position:"relative",
         minWidth,
@@ -150,6 +163,9 @@ function ListRow({ row, minWidth=1080, onOpen, last }) {
           </Box>
         </Box>
       </Box>
+
+      {/* Who touched the record last */}
+      <Cell k="updatedBy" sx={{ width: 130, pt:0.25 }} wrap/>
 
       {/* Alerts + Notifications — stacked, each item carries its own icon
           color (warning for alerts, info for notifications). */}
@@ -215,7 +231,8 @@ function KanbanView({ rows, onOpen }) {
     <Box sx={{
       display:"grid",
       gridTemplateColumns:`repeat(${cols.length}, minmax(236px, 1fr))`,
-      gap:1.25, alignItems:"flex-start",
+      gap:1.25, alignItems:"stretch",
+      flex:1, minHeight:360,
     }}>
       {cols.map(col => <KanbanColumn key={col.key} col={col} onOpen={onOpen}/>)}
     </Box>
@@ -226,22 +243,15 @@ function KanbanColumn({ col, onOpen }) {
   const hidden = Math.max(0, col.count - col.cards.length);
 
   return (
-    <Stack gap={0.75} sx={{ minWidth:0 }}>
-      {/* Alert-count pill that floats above the column header */}
-      <Box sx={{ height:20, display:"flex", justifyContent:"flex-end", pr:0.25 }}>
-        {col.alertCount > 0 && (
-          <Stack direction="row" alignItems="center" gap={0.35} sx={{
-            height:20, px:0.6, borderRadius:"5px",
-            bgcolor:T.alertBadgeBg, color:T.alertBadgeFg,
-            border:`1px solid ${T.alertLine}`,
-            fontSize:11, fontWeight:700, fontVariantNumeric:"tabular-nums",
-          }}>
-            <I.AlertTri size={11}/><span>{col.alertCount}</span>
-          </Stack>
-        )}
-      </Box>
+    <Stack gap={0.75} sx={{ minWidth:0, height:"100%" }}>
+      {/* Column body — a discrete panel holding header + its own card track */}
+      <Box sx={{
+        bgcolor:"#fff", border:`1px solid ${T.border}`,
+        borderRadius:"10px", p:0.75, display:"flex", flexDirection:"column", gap:0.75,
+        minWidth:0, flex:1, minHeight:0,
+      }}>
 
-      {/* Column header — label + total count pill */}
+      {/* Column header — label + alert count + total count pill */}
       <Stack direction="row" alignItems="center" gap={0.75} sx={{
         bgcolor:"#fff", border:`1px solid ${T.border}`,
         borderTop:`2px solid ${T.boardGreen}`,
@@ -254,6 +264,16 @@ function KanbanColumn({ col, onOpen }) {
             whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
           }}>{col.label}</Typography>
         </Tooltip>
+        {col.alertCount > 0 && (
+          <Stack direction="row" alignItems="center" gap={0.3} sx={{
+            height:20, px:0.6, borderRadius:"5px", flexShrink:0,
+            bgcolor:T.alertBadgeBg, color:T.alertBadgeFg,
+            border:`1px solid ${T.alertLine}`,
+            fontSize:11, fontWeight:700, fontVariantNumeric:"tabular-nums",
+          }}>
+            <I.AlertTri size={11}/><span>{col.alertCount}</span>
+          </Stack>
+        )}
         <Box sx={{
           bgcolor:T.boardGreen, color:"#fff", fontSize:11, fontWeight:700,
           borderRadius:"5px", px:0.8, py:"1px", minWidth:24, textAlign:"center",
@@ -261,8 +281,14 @@ function KanbanColumn({ col, onOpen }) {
         }}>{col.count}</Box>
       </Stack>
 
-      {/* Cards */}
-      <Stack gap={1} sx={{ minWidth:0 }}>
+      {/* Cards — each column scrolls on its own, like the live board */}
+      <Stack gap={1} sx={{
+        minWidth:0, flex:1, minHeight:0,
+        overflowY:"auto", overflowX:"hidden", pr:0.25,
+        "&::-webkit-scrollbar": { width:6 },
+        "&::-webkit-scrollbar-thumb": { bgcolor:T.borderStrong, borderRadius:999 },
+        "&::-webkit-scrollbar-track": { bgcolor:"transparent" },
+      }}>
         {col.cards.map(c => <KanbanCard key={c.id} card={c} onOpen={onOpen}/>)}
 
         {col.cards.length === 0 && (
@@ -279,9 +305,20 @@ function KanbanColumn({ col, onOpen }) {
           }}>+ {hidden.toLocaleString()} more</Box>
         )}
       </Stack>
+      </Box>
     </Stack>
   );
 }
+
+// Alert reasons, notification reasons and AI matches share one scroll region
+// inside the card, so they can never push the card's own fields off the
+// bottom of the column. The card's basic info always stays visible below it.
+const CARD_SCROLL = {
+  maxHeight: 164, overflowY: "auto", overflowX: "hidden", pr: 0.5,
+  "&::-webkit-scrollbar": { width: 5 },
+  "&::-webkit-scrollbar-thumb": { bgcolor: T.borderStrong, borderRadius: 999 },
+  "&::-webkit-scrollbar-track": { bgcolor: "transparent" },
+};
 
 // Alert / notification count badge that sits on the card title row.
 function CountBadge({ tone, count }) {
@@ -402,7 +439,7 @@ function CardFieldPair({ a, b }) {
   );
   return (
     <Box sx={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:1, minWidth:0 }}>
-      <Cell {...a}/><Cell {...b}/>
+      <Cell {...a}/>{b ? <Cell {...b}/> : <Box/>}
     </Box>
   );
 }
@@ -421,7 +458,7 @@ function KanbanCard({ card, onOpen }) {
       onClick={() => onOpen && onOpen(card)}
       sx={{
         bgcolor:"#fff",
-        border:`1px solid ${hasAlerts ? T.error : T.border}`,
+        border: hasAlerts ? `2px solid ${T.error}` : `1px solid ${T.border}`,
         ...(edge ? { borderLeft:`3px solid ${edge}` } : null),
         borderRadius:"8px",
         p:1, display:"flex", flexDirection:"column", gap:0.75,
@@ -457,22 +494,24 @@ function KanbanCard({ card, onOpen }) {
         {!hasAlerts && hasNotifs && <CountBadge tone="notif" count={card.notifCount}/>}
       </Stack>
 
-      {hasAlerts && <ReasonPanel tone="alert" title="Alert Reasons"        items={card.alerts}/>}
-      {hasNotifs && <ReasonPanel tone="notif" title="Notification Reasons" items={card.notifications}/>}
-      {hasAi     && <AiPanel items={card.ai} more={card.aiMore}/>}
+      {(hasAlerts || hasNotifs || hasAi) && (
+        <Stack gap={0.75} sx={{ minWidth:0, ...CARD_SCROLL }}>
+          {hasAlerts && <ReasonPanel tone="alert" title="Alert Reasons"        items={card.alerts}/>}
+          {hasNotifs && <ReasonPanel tone="notif" title="Notification Reasons" items={card.notifications}/>}
+          {hasAi     && <AiPanel items={card.ai} more={card.aiMore}/>}
+        </Stack>
+      )}
 
-      {(card.deliveryDate || card.status) && (
-        <CardFieldPair
-          a={{ label:"Delivery Date", value:card.deliveryDate }}
-          b={{ label:"Status",        value:card.status }}
-        />
-      )}
-      {(card.activity || card.updatedAt) && (
-        <CardFieldPair
-          a={{ label:"Activity",        value:card.activity }}
-          b={{ label:"Last Updated At", value:card.updatedAt }}
-        />
-      )}
+      {/* Basic info — present on every card, never scrolled away */}
+      <CardFieldPair
+        a={{ label:"Delivery Date", value:card.deliveryDate }}
+        b={{ label:"Status",        value:card.status }}
+      />
+      <CardFieldPair
+        a={{ label:"Activity",        value:card.activity }}
+        b={{ label:"Last Updated At", value:card.updatedAt }}
+      />
+      <CardFieldPair a={{ label:"Last Updated By", value:card.updatedBy }}/>
     </Box>
   );
 }
